@@ -9,6 +9,7 @@ import com.dataflow.budgetingservice.Models.Currency;
 import com.dataflow.budgetingservice.Repositories.BudgetRepository;
 import com.dataflow.budgetingservice.Repositories.CategoryRepository;
 import com.dataflow.budgetingservice.Repositories.CurrencyRepository;
+import com.dataflow.budgetingservice.Utils.SecurityUtils;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,6 +20,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -28,11 +30,10 @@ public class BudgetService {
     private final CategoryRepository categoryRepository;
     private final CurrencyRepository currencyRepository;
 
-    public List<BudgetStatusDTO> getUserBudgetStatus(String userId){
+    public List<BudgetStatusDTO> getUserBudgetStatus(){
+        String userId = SecurityUtils.getCurrentUserUuid();
         List<Budget> budgets = budgetRepository.findByUserIdAndIsActiveTrue(userId);
 
-        // Define the time window (Current Month)
-        LocalDateTime startOfMonth = LocalDate.now().withDayOfMonth(1).atStartOfDay();
         LocalDateTime now = LocalDateTime.now();
 
         return budgets.stream().map(budget -> {
@@ -40,7 +41,7 @@ public class BudgetService {
                     userId,
                     budget.getCategory().getId(),
                     budget.getCurrency().getId(),
-                    startOfMonth,
+                    budget.getStartDate().atStartOfDay(),
                     now
             );
 
@@ -64,18 +65,21 @@ public class BudgetService {
                 spent,
                 remaining,
                 progress,
-                status
+                status,
+                budget.getPeriod()
         );
     }
 
     public void createBudget(BudgetRequestDTO dto) {
         Budget budget = new Budget();
         budget.setId(UUID.randomUUID().toString());
-        budget.setUserId(dto.userId());
+        budget.setUserId(SecurityUtils.getCurrentUserUuid());
         budget.setLimitAmount(dto.limitAmount());
+        budget.setStartDate(dto.startDate());
+
 
         Category category = categoryRepository.getReferenceById(dto.categoryId());
-        Currency currency = currencyRepository.getReferenceById(dto.currencyId());
+        Currency currency = currencyRepository.findByCodeContainingIgnoreCase(dto.currencyCode());
 
         budget.setCategory(category);
         budget.setCurrency(currency);
@@ -88,6 +92,12 @@ public class BudgetService {
         Budget budget = budgetRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Budget not found with id: " + id));
 
+        String userId = SecurityUtils.getCurrentUserUuid();
+
+        if(!Objects.equals(budget.getUserId(), userId)){
+            System.out.println("User with id " + userId + " doesn't own the budget with id " + budget.getId());
+            return;
+        }
         if (dto.limitAmount() != null) {
             budget.setLimitAmount(dto.limitAmount());
         }
@@ -102,6 +112,13 @@ public class BudgetService {
     public void archiveBudget(String id) {
         Budget budget = budgetRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Budget not found with id: " + id));
+
+        String userId = SecurityUtils.getCurrentUserUuid();
+
+        if(!Objects.equals(budget.getUserId(), userId)){
+            System.out.println("User with id " + userId + " doesn't own the budget with id " + budget.getId());
+            return;
+        }
 
         budget.setIsActive(false);
         budgetRepository.save(budget);

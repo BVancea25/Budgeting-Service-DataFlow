@@ -23,9 +23,9 @@ public class BudgetController {
         budgetService.createBudget(request);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
-    @GetMapping("/status/{userId}")
-    public ResponseEntity<List<BudgetStatusDTO>> getBudgetStatus(@PathVariable String userId) {
-        return ResponseEntity.ok(budgetService.getUserBudgetStatus(userId));
+    @GetMapping("/status")
+    public ResponseEntity<List<BudgetStatusDTO>> getBudgetStatus() {
+        return ResponseEntity.ok(budgetService.getUserBudgetStatus());
     }
     @PutMapping("/{id}")
     public ResponseEntity<Void> updateBudget(

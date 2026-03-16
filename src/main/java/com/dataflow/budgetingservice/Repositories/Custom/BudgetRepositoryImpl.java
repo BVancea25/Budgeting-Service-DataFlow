@@ -31,6 +31,7 @@ public class BudgetRepositoryImpl implements BudgetRepositoryCustom{
         Query query = entityManager.createNativeQuery(sql);
         query.setParameter("userId", userId);
         query.setParameter("currencyId", currencyId);
+        query.setParameter("categoryId", categoryId);
         query.setParameter("startDate", startDate);
         query.setParameter("endDate", endDate);
 

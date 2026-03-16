@@ -1,11 +1,12 @@
 package com.dataflow.budgetingservice.DTO;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 public record BudgetRequestDTO(
-        String userId,
         String categoryId,
         BigDecimal limitAmount,
-        String currencyId,
-        String period // e.g., "MONTHLY"
+        String currencyCode,
+        String period, // e.g., "MONTHLY"
+        LocalDate startDate
 ) {}
