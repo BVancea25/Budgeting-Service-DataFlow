@@ -27,7 +27,7 @@ public class BudgetRepositoryImpl implements BudgetRepositoryCustom{
               AND transaction_date <= :endDate
               AND type = 'EXPENSE'
         """;
-
+        System.out.println("userId " + userId + " categoryId " + categoryId + " currencyId " + currencyId + " startDate " + startDate + " endDate " + endDate);
         Query query = entityManager.createNativeQuery(sql);
         query.setParameter("userId", userId);
         query.setParameter("currencyId", currencyId);
