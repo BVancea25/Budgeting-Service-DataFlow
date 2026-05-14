@@ -7,6 +7,7 @@ import java.time.LocalDate;
 
 public record BudgetStatusDTO(
         String budgetId,
+        String categoryId,
         String categoryName,
         BigDecimal limitAmount,
         BigDecimal spentAmount,

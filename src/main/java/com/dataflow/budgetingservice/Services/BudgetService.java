@@ -3,6 +3,8 @@ package com.dataflow.budgetingservice.Services;
 import com.dataflow.budgetingservice.DTO.BudgetRequestDTO;
 import com.dataflow.budgetingservice.DTO.BudgetStatusDTO;
 import com.dataflow.budgetingservice.DTO.BudgetUpdateRequestDTO;
+import com.dataflow.budgetingservice.Errors.ForbiddenOperationException;
+import com.dataflow.budgetingservice.Errors.ResourceNotFoundException;
 import com.dataflow.budgetingservice.Models.Budget;
 import com.dataflow.budgetingservice.Models.Category;
 import com.dataflow.budgetingservice.Models.Currency;
@@ -10,7 +12,6 @@ import com.dataflow.budgetingservice.Repositories.BudgetRepository;
 import com.dataflow.budgetingservice.Repositories.CategoryRepository;
 import com.dataflow.budgetingservice.Repositories.CurrencyRepository;
 import com.dataflow.budgetingservice.Utils.SecurityUtils;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -59,6 +60,7 @@ public class BudgetService {
 
         return new BudgetStatusDTO(
                 budget.getId(),
+                budget.getCategory().getId(),
                 budget.getCategory().getName(),
                 budget.getLimitAmount(),
                 spent,
@@ -80,8 +82,12 @@ public class BudgetService {
         budget.setStartDate(dto.startDate());
 
 
-        Category category = categoryRepository.getReferenceById(dto.categoryId());
+        Category category = categoryRepository.findById(dto.categoryId())
+                .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
         Currency currency = currencyRepository.findByCodeContainingIgnoreCase(dto.currencyCode());
+        if (currency == null) {
+            throw new ResourceNotFoundException("Currency not found");
+        }
 
         budget.setCategory(category);
         budget.setCurrency(currency);
@@ -92,13 +98,12 @@ public class BudgetService {
     @Transactional
     public void updateBudget(String id, BudgetUpdateRequestDTO dto) {
         Budget budget = budgetRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Budget not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Budget not found"));
 
         String userId = SecurityUtils.getCurrentUserUuid();
 
         if(!Objects.equals(budget.getUserId(), userId)){
-            System.out.println("User with id " + userId + " doesn't own the budget with id " + budget.getId());
-            return;
+            throw new ForbiddenOperationException("Not allowed to update this budget");
         }
         if (dto.limitAmount() != null) {
             budget.setLimitAmount(dto.limitAmount());
@@ -113,13 +118,12 @@ public class BudgetService {
     @Transactional
     public void archiveBudget(String id) {
         Budget budget = budgetRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Budget not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Budget not found"));
 
         String userId = SecurityUtils.getCurrentUserUuid();
 
         if(!Objects.equals(budget.getUserId(), userId)){
-            System.out.println("User with id " + userId + " doesn't own the budget with id " + budget.getId());
-            return;
+            throw new ForbiddenOperationException("Not allowed to archive this budget");
         }
 
         budget.setIsActive(false);
